@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>BabyFlow Pro</title>
+    <style>
+        :root { --pink: #ec4899; --blue: #3b82f6; --green: #22c55e; --bg: #f9fafb; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1f2937; }
+        .container { max-width: 400px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 28px; margin-bottom: 5px; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .stat-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; }
+        .stat-val { font-size: 18px; font-weight: bold; margin-top: 5px; }
+        .main-card { background: white; padding: 25px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center; }
+        .btn-row { display: flex; gap: 15px; margin-top: 20px; }
+        button { border: none; cursor: pointer; font-weight: bold; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
+        .btn-side { flex: 1; padding: 20px; border-radius: 15px; font-size: 16px; }
+        .izq { background: #fdf2f8; color: #be185d; }
+        .der { background: #f0fdf4; color: #15803d; }
+        .btn-stop { width: 100%; background: #ef4444; color: white; padding: 20px; border-radius: 15px; font-size: 16px; margin-top: 15px; }
+        .alarma-row { display: flex; justify-content: space-between; background: #f3f4f6; padding: 5px; border-radius: 15px; margin-top: 10px; }
+        .btn-h { flex: 1; padding: 10px; border-radius: 10px; background: transparent; color: #4b5563; }
+        .btn-h.active { background: var(--blue); color: white; }
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px; font-size: 16px; outline: none; }
+        .btn-ok { background: var(--blue); color: white; padding: 0 20px; border-radius: 12px; }
+        .history-item { background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BabyFlow Pro</h1>
+        <p style="text-align:center; color:#9ca3af; font-size:12px; margin-bottom:20px;">LACTANCIA Y PESO</p>
+
+        <div class="dashboard">
+            <div class="stat-card">
+                <div class="stat-label">Evolución Peso</div>
+                <div id="evolucionPeso" class="stat-val" style="color:var(--blue)">+0.000 kg</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Próxima Toma</div>
+                <div id="proximaHora" class="stat-val" style="color:var(--pink)">--:--</div>
+            </div>
+        </div>
+
+        <div id="cardToma" class="main-card">
+            <div id="reposo">
+                <div class="stat-label">Toca usar el pecho:</div>
+                <div id="sugLado" style="font-size:22px; font-weight:900; color:var(--pink); margin: 10px 0;">IZQUIERDO</div>
+                <div class="btn-row">
+                    <button onclick="inicio('Izquierdo')" class="btn-side izq">IZQ</button>
+                    <button onclick="inicio('Derecho')" class="btn-side der">DER</button>
+                </div>
+            </div>
+            <div id="activo" class="hidden">
+                <div id="timerText" style="font-weight:bold; font-size:18px;">Lado Izquierdo</div>
+                <div id="horaIni" style="color:#9ca3af; font-size:14px; margin-top:5px;">Inició: 12:00</div>
+                <button onclick="fin()" class="btn-stop">FINALIZAR TOMA</button>
+            </div>
+        </div>
+
+        <div class="main-card" style="padding: 15px; text-align: left;">
+            <div class="stat-label">⏱️ Intervalo Alarma</div>
+            <div class="alarma-row">
+                <button onclick="setH(1)" id="h1" class="btn-h">1h</button>
+                <button onclick="setH(2)" id="h2" class="btn-h">2h</button>
+                <button onclick="setH(3)" id="h3" class="btn-h">3h</button>
+                <button onclick="setH(4)" id="h4" class="btn-h">4h</button>
+            </div>
+            <div class="stat-label" style="margin-top:20px;">⚖️ Registro de Peso</div>
+            <div class="input-group">
+                <input type="text" id="peso" inputmode="decimal" placeholder="3,500">
+                <button onclick="addPeso()" class="btn-ok">OK</button>
+            </div>
+        </div>
+
+        <div id="historial"></div>
+    </div>
+
+    <script>
+        let tomas = JSON.parse(localStorage.getItem('bf_tomas')) || [];
+        let pesos = JSON.parse(localStorage.getItem('bf_pesos')) || [];
+        let hAlarma = parseInt(localStorage.getItem('bf_h')) || 3;
+        let tActiva = null;
+
+        function update() {
+            localStorage.setItem('bf_tomas', JSON.stringify(tomas));
+            localStorage.setItem('bf_pesos', JSON.stringify(pesos));
+            localStorage.setItem('bf_h', hAlarma);
+
+            // UI Alarma
+            document.querySelectorAll('.btn-h').forEach(b => b.classList.remove('active'));
+            document.getElementById('h'+hAlarma).classList.add('active');
+
+            // Lado
+            const ult = tomas[0]?.lado || 'Derecho';
+            document.getElementById('sugLado').innerText = ult === 'Izquierdo' ? 'DERECHO' : 'IZQUIERDO';
+
+            // Próxima
+            if (tomas.length > 0) {
+                const [h, m] = tomas[0].f.split(':');
+                const d = new Date(); d.setHours(h); d.setMinutes(m);
+                d.setHours(d.getHours() + hAlarma);
+                document.getElementById('proximaHora').innerText = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            }
+
+            // Peso
+            if (pesos.length > 1) {
+                const diff = (pesos[0].v - pesos[pesos.length-1].v).toFixed(3);
+                document.getElementById('evolucionPeso').innerText = (diff>=0?'+':'')+diff+' kg';
+            }
+
+            // Lista
+            const res = document.getElementById('historial');
+            res.innerHTML = '';
+            tomas.slice(0,5).forEach(t => {
+                res.innerHTML += `<div class="history-item">
+                    <div>
+                        <div style="font-size:10px; color:#9ca3af">${t.d} - Pecho ${t.lado}</div>
+                        <div style="font-weight:bold">${t.dur} min <span style="font-weight:normal; color:#ddd">|</span> ${t.i}hs</div>
+                    </div>
+                    <button onclick="borrar(${t.id})" style="color:#ddd; font-size:20px">&times;</button>
+                </div>`;
+            });
+        }
+
+        function inicio(l) {
+            tActiva = { i: new Date(), l: l };
+            document.getElementById('reposo').classList.add('hidden');
+            document.getElementById('activo').classList.remove('hidden');
+            document.getElementById('timerText').innerText = 'Lado ' + l;
+            document.getElementById('horaIni').innerText = 'Inició: ' + tActiva.i.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        }
+
+        function fin() {
+            const f = new Date();
+            const dur = Math.round((f - tActiva.i)/60000);
+            tomas.unshift({
+                id: Date.now(),
+                d: f.toLocaleDateString([], {day:'2-digit', month:'2-digit'}),
+                i: tActiva.i.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                f: f.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                dur, lado: tActiva.l
+            });
+            document.getElementById('reposo').classList.remove('hidden');
+            document.getElementById('activo').classList.add('hidden');
+            update();
+        }
+
+        function setH(n) { hAlarma = n; update(); }
+        
+        function addPeso() {
+            const v = parseFloat(document.getElementById('peso').value.replace(',','.'));
+            if (isNaN(v)) return alert("Peso inválido");
+            pesos.unshift({id: Date.now(), v: v});
+            document.getElementById('peso').value = '';
+            update();
+        }
+
+        function borrar(id) { if(confirm("¿Borrar?")) { tomas = tomas.filter(t=>t.id!==id); update(); } }
+
+        update();
+    </script>
+</body>
+</html>
