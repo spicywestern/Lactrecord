@@ -2,125 +2,158 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BabyFlow FIX v10</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>BabyFlow Pro v12</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-gender { transition: all 0.3s; border: 2px solid #e2e8f0; }
+        .btn-gender.active-f { background: #fdf2f8; border-color: #db2777; color: #db2777; }
+        .btn-gender.active-m { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+        #splash { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; flex-direction: column; items: center; justify-content: center; }
+    </style>
 </head>
-<body class="bg-slate-100 p-4">
+<body class="bg-slate-50 min-h-screen">
 
-    <div class="max-w-md mx-auto space-y-4">
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm flex justify-between items-center">
-            <h1 class="text-2xl font-black text-pink-600">Martina</h1>
-            <div class="text-right">
-                <p class="text-[10px] font-bold text-slate-400 uppercase">Siguiente</p>
-                <p id="clock" class="text-xl font-mono font-bold">--:--:--</p>
+    <div id="splash">
+        <h1 class="text-3xl font-black text-slate-800">BabyFlow <span class="text-pink-500">v12</span></h1>
+        <p class="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Cargando mejoras...</p>
+    </div>
+
+    <div id="app" class="max-w-md mx-auto p-4 hidden">
+        <div id="setup-gender" class="bg-white rounded-[2.5rem] p-8 shadow-xl mb-6 text-center">
+            <h2 class="text-xl font-black mb-6">Seleccione Sexo</h2>
+            <div class="flex gap-4">
+                <button onclick="saveGender('F')" id="btn-f" class="btn-gender flex-1 py-10 rounded-[2rem] font-black text-2xl">F</button>
+                <button onclick="saveGender('M')" id="btn-m" class="btn-gender flex-1 py-10 rounded-[2rem] font-black text-2xl">M</button>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-4 font-bold uppercase">F: Femenino | M: Masculino</p>
+        </div>
+
+        <div class="bg-white rounded-[2.5rem] p-6 shadow-md mb-4 flex justify-between items-center border-l-8 border-pink-500">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Próxima Toma</p>
+                <p id="next-timer" class="text-3xl font-black text-slate-800">--:--:--</p>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="setFreq(1)" class="w-8 h-8 rounded-lg border text-[10px] font-bold">1h</button>
+                <button onclick="setFreq(2)" class="w-8 h-8 rounded-lg border text-[10px] font-bold">2h</button>
+                <button onclick="setFreq(3)" class="w-8 h-8 rounded-lg border bg-black text-white text-[10px] font-bold">3h</button>
             </div>
         </div>
 
-        <div class="flex gap-2">
-            <button onclick="setH(1)" class="h-btn flex-1 bg-white p-3 rounded-xl text-xs font-bold border">1h</button>
-            <button onclick="setH(2)" class="h-btn flex-1 bg-white p-3 rounded-xl text-xs font-bold border">2h</button>
-            <button onclick="setH(3)" class="h-btn flex-1 bg-slate-800 text-white p-3 rounded-xl text-xs font-bold">3h</button>
-        </div>
-
-        <div class="bg-white p-8 rounded-[3rem] shadow-xl text-center">
-            <div id="ui-espera" class="flex gap-4">
-                <button onclick="empezar('Izq')" class="flex-1 py-10 bg-pink-500 text-white rounded-3xl font-bold text-xl">IZQ</button>
-                <button onclick="empezar('Der')" class="flex-1 py-10 bg-blue-500 text-white rounded-3xl font-bold text-xl">DER</button>
+        <div class="bg-white rounded-[3rem] p-8 shadow-2xl mb-6 text-center border-2 border-white">
+            <div id="controls-idle" class="flex gap-4">
+                <button onclick="startToma('Izq')" class="flex-1 py-12 bg-pink-500 text-white rounded-[2.5rem] font-black text-2xl active:scale-95 transition">IZQ</button>
+                <button onclick="startToma('Der')" class="flex-1 py-12 bg-blue-500 text-white rounded-[2.5rem] font-black text-2xl active:scale-95 transition">DER</button>
             </div>
-            
-            <div id="ui-corriendo" class="hidden">
-                <p id="lbl-lado" class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest"></p>
-                <p id="cronometro" class="text-6xl font-mono font-black mb-6">00:00</p>
+
+            <div id="controls-active" class="hidden">
+                <p id="active-side" class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2"></p>
+                <p id="timer-display" class="text-7xl font-mono font-black text-slate-800 mb-8">00:00</p>
                 <div class="flex gap-2">
-                    <button id="btn-p" onclick="pausa()" class="flex-1 bg-orange-400 text-white py-4 rounded-xl font-bold">PAUSA</button>
-                    <button id="btn-r" onclick="resume()" class="flex-1 bg-green-500 text-white py-4 rounded-xl font-bold hidden">SIGUE</button>
-                    <button onclick="terminar()" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-bold">FIN</button>
+                    <button id="btn-pause" onclick="pauseToma()" class="flex-1 bg-amber-400 text-white py-5 rounded-2xl font-black uppercase text-xs">Pausar</button>
+                    <button id="btn-resume" onclick="resumeToma()" class="flex-1 bg-green-500 text-white py-5 rounded-2xl font-black uppercase text-xs hidden">Reanudar</button>
+                    <button onclick="stopToma()" class="flex-1 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs">Finalizar</button>
                 </div>
             </div>
         </div>
 
-        <div id="historial" class="space-y-2"></div>
+        <div id="history" class="space-y-2"></div>
     </div>
 
     <script>
-        // CONFIGURACIÓN (Verifica que tu DatabaseURL sea exactamente esta)
-        const firebaseConfig = {
-            projectId: "babyflow-11b57",
-            databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com"
-        };
+        const firebaseConfig = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const ID_FAMILIA = "MAR123"; // ASEGÚRATE DE USAR TU CÓDIGO AQUÍ
+        const FAMILY_ID = localStorage.getItem('bf_id') || prompt("Código de Familia:").toUpperCase();
+        localStorage.setItem('bf_id', FAMILY_ID);
 
-        let tiempo = 0, motor = null, enPausa = false, horasGap = 3, tomaObj = null;
+        let seg = 0, timer = null, isPaused = false, freq = 3, currentToma = null;
 
-        function setH(n) { horasGap = n; }
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('splash').style.display = 'none';
+                document.getElementById('app').classList.remove('hidden');
+            }, 1000);
 
-        function empezar(lado) {
-            // GRABA PRÓXIMA TOMA DESDE EL INICIO
-            db.ref(`f/${ID_FAMILIA}/proxima`).set(Date.now() + (horasGap * 3600000));
+            db.ref(`f/${FAMILY_ID}/info/gender`).on('value', s => {
+                if(s.val()) document.getElementById('setup-gender').classList.add('hidden');
+            });
+
+            db.ref(`f/${FAMILY_ID}/tomas`).on('value', renderHistory);
+            setInterval(updateCountdown, 1000);
+        };
+
+        function saveGender(g) {
+            db.ref(`f/${FAMILY_ID}/info/gender`).set(g);
+            document.getElementById('setup-gender').classList.add('hidden');
+        }
+
+        function setFreq(h) { freq = h; }
+
+        function startToma(lado) {
+            // PRÓXIMA TOMA DESDE EL INICIO
+            db.ref(`f/${FAMILY_ID}/proxima`).set(Date.now() + (freq * 3600000));
             
-            tiempo = 0; enPausa = false;
-            tomaObj = { lado, ini: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+            seg = 0; isPaused = false;
+            currentToma = { lado, ini: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
             
-            document.getElementById('ui-espera').classList.add('hidden');
-            document.getElementById('ui-corriendo').classList.remove('hidden');
-            document.getElementById('lbl-lado').innerText = "Pecho " + lado;
-
-            motor = setInterval(() => {
-                if(!enPausa) {
-                    tiempo++;
-                    const m = Math.floor(tiempo/60).toString().padStart(2,'0');
-                    const s = (tiempo%60).toString().padStart(2,'0');
-                    document.getElementById('cronometro').innerText = `${m}:${s}`;
+            document.getElementById('controls-idle').classList.add('hidden');
+            document.getElementById('controls-active').classList.remove('hidden');
+            document.getElementById('active-side').innerText = "Pecho " + lado;
+            
+            timer = setInterval(() => {
+                if(!isPaused) {
+                    seg++;
+                    const m = Math.floor(seg/60).toString().padStart(2,0);
+                    const s = (seg%60).toString().padStart(2,0);
+                    document.getElementById('timer-display').innerText = `${m}:${s}`;
                 }
             }, 1000);
         }
 
-        function pausa() { enPausa = true; document.getElementById('btn-p').classList.add('hidden'); document.getElementById('btn-r').classList.remove('hidden'); }
-        function resume() { enPausa = false; document.getElementById('btn-r').classList.add('hidden'); document.getElementById('btn-p').classList.remove('hidden'); }
+        function pauseToma() { isPaused = true; document.getElementById('btn-pause').classList.add('hidden'); document.getElementById('btn-resume').classList.remove('hidden'); }
+        function resumeToma() { isPaused = false; document.getElementById('btn-resume').classList.add('hidden'); document.getElementById('btn-pause').classList.remove('hidden'); }
 
-        function terminar() {
-            clearInterval(motor);
+        function stopToma() {
+            clearInterval(timer);
             const fin = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            db.ref(`f/${ID_FAMILIA}/registros`).push({
+            db.ref(`f/${FAMILY_ID}/tomas`).push({
                 ts: Date.now(),
-                dur: Math.max(1, Math.round(tiempo/60)),
-                lado: tomaObj.lado,
-                intervalo: `${tomaObj.ini} a ${fin}`
+                dur: Math.max(1, Math.round(seg/60)),
+                lado: currentToma.lado,
+                intervalo: `${currentToma.ini} a ${fin}`
             });
-            document.getElementById('ui-espera').classList.remove('hidden');
-            document.getElementById('ui-corriendo').classList.add('hidden');
+            document.getElementById('controls-idle').classList.remove('hidden');
+            document.getElementById('controls-active').classList.add('hidden');
         }
 
-        // RELOJ CUENTA REGRESIVA
-        setInterval(() => {
-            db.ref(`f/${ID_FAMILIA}/proxima`).on('value', s => {
-                const t = s.val();
-                if(!t) return;
-                const d = t - Date.now();
-                if(d <= 0) document.getElementById('clock').innerText = "¡TOCA!";
+        function updateCountdown() {
+            db.ref(`f/${FAMILY_ID}/proxima`).once('value', s => {
+                const target = s.val();
+                if(!target) return;
+                const diff = target - Date.now();
+                const el = document.getElementById('next-timer');
+                if(diff <= 0) el.innerText = "¡TOCA!";
                 else {
-                    const h = Math.floor(d/3600000), m = Math.floor((d%3600000)/60000), sec = Math.floor((d%60000)/1000);
-                    document.getElementById('clock').innerText = `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+                    const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), sc = Math.floor((diff%60000)/1000);
+                    el.innerText = `${h}:${m.toString().padStart(2,0)}:${sc.toString().padStart(2,0)}`;
                 }
             });
-        }, 1000);
+        }
 
-        // LEER HISTORIAL (Realtime)
-        db.ref(`f/${ID_FAMILIA}/registros`).on('value', snap => {
-            const h = document.getElementById('historial'); h.innerHTML = '';
+        function renderHistory(snap) {
+            const h = document.getElementById('history'); h.innerHTML = '';
             const data = snap.val() ? Object.values(snap.val()) : [];
-            data.reverse().slice(0,5).forEach(r => {
+            data.reverse().slice(0,5).forEach(t => {
                 h.innerHTML += `<div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
-                    <div><p class="font-bold">${r.dur} min - ${r.lado}</p><p class="text-[10px] text-slate-400">${r.intervalo}</p></div>
-                    <button onclick="borrar('${Object.keys(snap.val())[data.indexOf(r)]}')" class="text-red-300">✕</button>
+                    <div><p class="font-black text-slate-800">${t.dur} min - ${t.lado}</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">${t.intervalo}</p></div>
                 </div>`;
             });
-        });
+        }
     </script>
 </body>
 </html>
