@@ -3,238 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3209/3209121.png">
-
-    <title>BabyFlow Pro</title>
+    <title>BabyFlow Pro - Alarmas</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        :root { --main-color: #db2777; }
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            padding-top: env(safe-area-inset-top);
-        }
-        .glass { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-        .modo-medico .solo-padres { display: none !important; }
-        .btn-time { border: 1px solid #e2e8f0; padding: 10px; border-radius: 14px; font-size: 13px; font-weight: 800; transition: 0.2s; }
-        .btn-time.active { background: #000; color: #fff; border-color: #000; }
-        #splash { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; items: center; justify-content: center; }
+        :root { --main: #db2777; }
+        body { font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.04); }
+        .btn-interval { border: 1px solid #e2e8f0; padding: 12px; border-radius: 15px; font-weight: 800; flex: 1; transition: 0.2s; }
+        .btn-interval.active { background: #000; color: #fff; border-color: #000; transform: scale(1.05); }
+        .pulse-red { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { color: #000; } 50% { color: #db2777; } 100% { color: #000; } }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen pb-20">
 
-    <div id="splash">
-        <h1 class="text-3xl font-black text-slate-800 tracking-tighter">BabyFlow <span class="text-pink-500">PRO</span></h1>
-    </div>
-
-    <div id="screen-role" class="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-8 hidden">
-        <h1 class="text-3xl font-black mb-10 text-center">Configuración inicial</h1>
-        <div class="w-full max-w-xs space-y-4">
-            <button onclick="selectRole('parent')" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black shadow-xl">Familia (Registro)</button>
-            <button onclick="selectRole('medico')" class="w-full border-2 border-slate-900 py-6 rounded-[2rem] font-black">Pediatra (Consultas)</button>
-        </div>
-    </div>
-
-    <div id="app" class="max-w-md mx-auto p-4 hidden">
-        <nav class="flex justify-between items-center py-4 mb-4">
-            <button id="btn-back" onclick="location.reload()" class="hidden bg-white border p-3 rounded-full text-xs font-bold">← LISTA</button>
-            <div class="text-right flex-1">
+    <div id="app" class="max-w-md mx-auto p-4">
+        <header class="flex justify-between items-center py-6">
+            <div>
                 <h2 id="baby-name" class="text-3xl font-black text-slate-800 tracking-tighter">Martina</h2>
-                <span id="display-id" class="text-[10px] font-bold text-slate-400 border px-2 py-0.5 rounded uppercase tracking-widest"></span>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Panel de Control</p>
             </div>
-        </nav>
+            <div class="text-right">
+                <span id="status-tag" class="bg-green-100 text-green-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">En Línea</span>
+            </div>
+        </header>
 
-        <div class="glass rounded-[2.5rem] p-6 mb-6 bg-white flex flex-col items-center shadow-sm">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Próxima Toma (Desde inicio)</p>
-            <p id="next-timer" class="text-4xl font-black text-slate-800 mb-4 tracking-tighter">--:--:--</p>
-            <div class="flex gap-2 solo-padres">
-                <button onclick="updateNextTime(1)" class="btn-time">1h</button>
-                <button onclick="updateNextTime(2)" class="btn-time">2h</button>
-                <button onclick="updateNextTime(3)" id="default-next" class="btn-time active">3h</button>
-                <button onclick="updateNextTime(4)" class="btn-time">4h</button>
+        <div class="glass rounded-[2.5rem] p-8 mb-6 text-center border-b-4 border-pink-500">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Cuenta Regresiva Próxima Toma</p>
+            <p id="countdown" class="text-5xl font-black text-slate-800 mb-6 tracking-tighter">--:--:--</p>
+            
+            <p class="text-[10px] font-bold text-slate-400 uppercase mb-3">Programar frecuencia:</p>
+            <div class="flex gap-2">
+                <button onclick="setGap(1)" class="btn-interval">1h</button>
+                <button onclick="setGap(2)" class="btn-interval">2h</button>
+                <button onclick="setGap(3)" id="default-gap" class="btn-interval active">3h</button>
+                <button onclick="setGap(4)" class="btn-interval">4h</button>
             </div>
         </div>
 
-        <div class="solo-padres glass rounded-[3rem] p-8 mb-6 text-center shadow-lg border-2 border-white">
-            <div id="timer-idle" class="flex gap-4">
-                <button onclick="startTimer('Izquierdo')" class="flex-1 py-12 rounded-[2.5rem] bg-pink-50 text-pink-600 border-2 border-pink-100 font-black text-lg active:scale-95 transition">IZQ</button>
-                <button onclick="startTimer('Derecho')" class="flex-1 py-12 rounded-[2.5rem] bg-blue-50 text-blue-600 border-2 border-blue-100 font-black text-lg active:scale-95 transition">DER</button>
+        <div class="glass rounded-[2.5rem] p-8 mb-8 text-center shadow-xl">
+            <div id="idle-ui" class="flex gap-4">
+                <button onclick="iniciarToma('Izq')" class="flex-1 py-12 rounded-[2.2rem] bg-pink-50 text-pink-600 font-black border-2 border-pink-100 text-2xl shadow-sm active:scale-95 transition">IZQ</button>
+                <button onclick="iniciarToma('Der')" class="flex-1 py-12 rounded-[2.2rem] bg-blue-50 text-blue-600 font-black border-2 border-blue-100 text-2xl shadow-sm active:scale-95 transition">DER</button>
             </div>
-            <div id="timer-active" class="hidden">
-                <p id="active-side" class="text-xs font-bold text-slate-300 uppercase mb-2 tracking-widest">...</p>
-                <p id="active-time" class="text-7xl font-mono font-black my-6 text-slate-800 tracking-tighter">00:00</p>
+            
+            <div id="active-ui" class="hidden">
+                <p id="lado-label" class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Alimentando: Pecho ...</p>
+                <p id="timer-display" class="text-7xl font-mono font-black text-slate-800 mb-8">00:00</p>
                 <div class="flex gap-3">
-                    <button id="btn-pause" onclick="pauseToma()" class="flex-1 bg-amber-400 text-white py-5 rounded-2xl font-black uppercase text-xs">Pausar</button>
-                    <button id="btn-resume" onclick="resumeToma()" class="flex-1 bg-green-500 text-white py-5 rounded-2xl font-black uppercase text-xs hidden">Reanudar</button>
-                    <button onclick="stopToma()" class="flex-1 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs">Finalizar</button>
+                    <button id="pause-btn" onclick="pausarToma()" class="flex-1 bg-amber-400 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest">Pausar</button>
+                    <button id="resume-btn" onclick="reanudarToma()" class="flex-1 bg-green-500 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest hidden">Reanudar</button>
+                    <button onclick="finalizarToma()" class="flex-1 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest">Finalizar</button>
                 </div>
             </div>
         </div>
 
-        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4 px-2">Historial Martina</h3>
-        <div id="history" class="space-y-3 pb-24"></div>
+        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4 px-2">Historial de tomas</h3>
+        <div id="history" class="space-y-3"></div>
     </div>
 
     <script>
-        const fb = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
-        firebase.initializeApp(fb);
+        const config = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
+        firebase.initializeApp(config);
         const db = firebase.database();
 
-        let role = localStorage.getItem('bf_role');
-        let fID = localStorage.getItem('bf_family_id');
-        let activeToma = null;
-        let tInt = null;
-        let isPaused = false;
-        let nextGap = 3; // Horas por defecto
+        let familyID = localStorage.getItem('bf_family_id') || prompt("Código de Familia:").toUpperCase();
+        localStorage.setItem('bf_family_id', familyID);
+
+        let segundos = 0;
+        let cronoInt = null;
+        let pausado = false;
+        let gapSeleccionado = 3;
+        let datosToma = null;
 
         window.onload = () => {
-            setTimeout(() => document.getElementById('splash').style.display='none', 800);
-            if(!role) document.getElementById('screen-role').classList.remove('hidden');
-            else initApp(fID);
+            db.ref(`f/${familyID}`).on('value', snap => renderHistorial(snap.val() || {}));
+            setInterval(actualizarRelojProxima, 1000);
             
-            setInterval(countdown, 1000);
+            // Solicitar permiso de notificaciones para alarmas
+            if ("Notification" in window) Notification.requestPermission();
         };
 
-        function selectRole(r) {
-            role = r;
-            localStorage.setItem('bf_role', r);
-            document.getElementById('screen-role').classList.add('hidden');
-            if(r === 'medico') alert("Como médico, vincula pacientes con su código.");
-            const id = prompt("Ingrese Código de Familia:").toUpperCase();
-            if(id) initApp(id);
+        function setGap(h) {
+            gapSeleccionado = h;
+            document.querySelectorAll('.btn-interval').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
         }
 
-        function initApp(id) {
-            fID = id;
-            localStorage.setItem('bf_family_id', id);
-            document.getElementById('app').classList.remove('hidden');
-            document.getElementById('display-id').innerText = id;
-            if(role === 'medico') {
-                document.body.classList.add('modo-medico');
-                document.getElementById('btn-back').classList.remove('hidden');
-            }
-            db.ref(`f/${id}`).on('value', snap => render(snap.val() || {}));
-        }
+        function iniciarToma(lado) {
+            // 1. Programar Próxima Toma DESDE EL INICIO (Regla de oro)
+            const horaProxima = Date.now() + (gapSeleccionado * 3600000);
+            db.ref(`f/${familyID}/info/proxima`).set(horaProxima);
 
-        // LÓGICA CRONÓMETRO Y REANUDAR
-        function startTimer(lado) {
-            // CALCULA PRÓXIMA TOMA DESDE EL INICIO
-            const target = Date.now() + (nextGap * 3600000);
-            db.ref(`f/${fID}/info/next`).set(target);
-
-            activeToma = {
-                lado,
-                seg: 0,
-                ini: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                ts: Date.now()
+            // 2. Preparar UI y Cronómetro
+            segundos = 0;
+            pausado = false;
+            datosToma = {
+                lado: lado,
+                horaInicio: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
             };
-            
-            document.getElementById('timer-idle').classList.add('hidden');
-            document.getElementById('timer-active').classList.remove('hidden');
-            document.getElementById('active-side').innerText = "PECHO " + lado;
-            
-            run();
-        }
 
-        function run() {
-            tInt = setInterval(() => {
-                if(!isPaused) {
-                    activeToma.seg++;
-                    const m = Math.floor(activeToma.seg/60).toString().padStart(2,'0');
-                    const s = (activeToma.seg%60).toString().padStart(2,'0');
-                    document.getElementById('active-time').innerText = `${m}:${s}`;
+            document.getElementById('idle-ui').classList.add('hidden');
+            document.getElementById('active-ui').classList.remove('hidden');
+            document.getElementById('lado-label').innerText = "Alimentando: Pecho " + lado;
+            
+            cronoInt = setInterval(() => {
+                if(!pausado) {
+                    segundos++;
+                    const min = Math.floor(segundos/60).toString().padStart(2,'0');
+                    const seg = (segundos%60).toString().padStart(2,'0');
+                    document.getElementById('timer-display').innerText = `${min}:${seg}`;
                 }
             }, 1000);
         }
 
-        function pauseToma() {
-            isPaused = true;
-            document.getElementById('btn-pause').classList.add('hidden');
-            document.getElementById('btn-resume').classList.remove('hidden');
-        }
-
-        function resumeToma() {
-            isPaused = false;
-            document.getElementById('btn-resume').classList.add('hidden');
-            document.getElementById('btn-pause').classList.remove('hidden');
-        }
-
-        function stopToma() {
-            clearInterval(tInt);
-            const fin = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            const id = 'T' + Date.now();
-            
-            db.ref(`f/${fID}/tomas/${id}`).set({
-                id,
-                ts: Date.now(),
-                dur: Math.max(1, Math.round(activeToma.seg / 60)),
-                lado: activeToma.lado,
-                ini: activeToma.ini,
-                fin: fin,
-                type: 'toma'
-            });
-
-            document.getElementById('timer-idle').classList.remove('hidden');
-            document.getElementById('timer-active').classList.add('hidden');
-            document.getElementById('active-time').innerText = "00:00";
-            isPaused = false;
-        }
-
-        // LÓGICA PRÓXIMA TOMA
-        function updateNextTime(h) {
-            nextGap = h;
-            document.querySelectorAll('.btn-time').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-        }
-
-        function countdown() {
-            db.ref(`f/${fID}/info/next`).once('value', snap => {
-                const target = snap.val();
-                if(!target) return;
-                const diff = target - Date.now();
-                const el = document.getElementById('next-timer');
-                
-                if(diff <= 0) {
-                    el.innerText = "¡TOCA COMER!";
-                    el.classList.add('text-pink-600', 'animate-pulse');
-                } else {
-                    el.classList.remove('text-pink-600', 'animate-pulse');
-                    const h = Math.floor(diff/3600000);
-                    const m = Math.floor((diff%3600000)/60000);
-                    const s = Math.floor((diff%60000)/1000);
-                    el.innerText = `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-                }
-            });
-        }
-
-        function render(data) {
-            document.getElementById('baby-name').innerText = data.info?.name || "Martina";
-            const hist = document.getElementById('history');
-            hist.innerHTML = '';
-            
-            const tomas = data.tomas ? Object.values(data.tomas) : [];
-            tomas.sort((a,b) => b.ts - a.ts).slice(0,10).forEach(t => {
-                hist.innerHTML += `
-                    <div class="glass p-5 rounded-[2rem] flex justify-between items-center bg-white">
-                        <div class="flex items-center gap-4">
-                            <span class="text-2xl">🍼</span>
-                            <div>
-                                <p class="font-black text-slate-800">${t.dur} min</p>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase">${t.ini} a ${t.fin} • Lado ${t.lado}</p>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-        }
-    </script>
-</body>
-</html>
+        function pausarToma() {
+            pausado = true;
+            document.getElementById('pause-btn').classList.add('hidden');
+            document.getElementById
