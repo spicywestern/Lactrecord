@@ -2,129 +2,125 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3209/3209121.png">
-    <title>BabyFlow Pro - Alarmas</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BabyFlow FIX v10</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        :root { --main: #db2777; }
-        body { font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-        .glass { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 15px rgba(0,0,0,0.04); }
-        .btn-interval { border: 1px solid #e2e8f0; padding: 12px; border-radius: 15px; font-weight: 800; flex: 1; transition: 0.2s; }
-        .btn-interval.active { background: #000; color: #fff; border-color: #000; transform: scale(1.05); }
-        .pulse-red { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { color: #000; } 50% { color: #db2777; } 100% { color: #000; } }
-    </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-20">
+<body class="bg-slate-100 p-4">
 
-    <div id="app" class="max-w-md mx-auto p-4">
-        <header class="flex justify-between items-center py-6">
-            <div>
-                <h2 id="baby-name" class="text-3xl font-black text-slate-800 tracking-tighter">Martina</h2>
-                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Panel de Control</p>
-            </div>
+    <div class="max-w-md mx-auto space-y-4">
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm flex justify-between items-center">
+            <h1 class="text-2xl font-black text-pink-600">Martina</h1>
             <div class="text-right">
-                <span id="status-tag" class="bg-green-100 text-green-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">En Línea</span>
-            </div>
-        </header>
-
-        <div class="glass rounded-[2.5rem] p-8 mb-6 text-center border-b-4 border-pink-500">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Cuenta Regresiva Próxima Toma</p>
-            <p id="countdown" class="text-5xl font-black text-slate-800 mb-6 tracking-tighter">--:--:--</p>
-            
-            <p class="text-[10px] font-bold text-slate-400 uppercase mb-3">Programar frecuencia:</p>
-            <div class="flex gap-2">
-                <button onclick="setGap(1)" class="btn-interval">1h</button>
-                <button onclick="setGap(2)" class="btn-interval">2h</button>
-                <button onclick="setGap(3)" id="default-gap" class="btn-interval active">3h</button>
-                <button onclick="setGap(4)" class="btn-interval">4h</button>
+                <p class="text-[10px] font-bold text-slate-400 uppercase">Siguiente</p>
+                <p id="clock" class="text-xl font-mono font-bold">--:--:--</p>
             </div>
         </div>
 
-        <div class="glass rounded-[2.5rem] p-8 mb-8 text-center shadow-xl">
-            <div id="idle-ui" class="flex gap-4">
-                <button onclick="iniciarToma('Izq')" class="flex-1 py-12 rounded-[2.2rem] bg-pink-50 text-pink-600 font-black border-2 border-pink-100 text-2xl shadow-sm active:scale-95 transition">IZQ</button>
-                <button onclick="iniciarToma('Der')" class="flex-1 py-12 rounded-[2.2rem] bg-blue-50 text-blue-600 font-black border-2 border-blue-100 text-2xl shadow-sm active:scale-95 transition">DER</button>
+        <div class="flex gap-2">
+            <button onclick="setH(1)" class="h-btn flex-1 bg-white p-3 rounded-xl text-xs font-bold border">1h</button>
+            <button onclick="setH(2)" class="h-btn flex-1 bg-white p-3 rounded-xl text-xs font-bold border">2h</button>
+            <button onclick="setH(3)" class="h-btn flex-1 bg-slate-800 text-white p-3 rounded-xl text-xs font-bold">3h</button>
+        </div>
+
+        <div class="bg-white p-8 rounded-[3rem] shadow-xl text-center">
+            <div id="ui-espera" class="flex gap-4">
+                <button onclick="empezar('Izq')" class="flex-1 py-10 bg-pink-500 text-white rounded-3xl font-bold text-xl">IZQ</button>
+                <button onclick="empezar('Der')" class="flex-1 py-10 bg-blue-500 text-white rounded-3xl font-bold text-xl">DER</button>
             </div>
             
-            <div id="active-ui" class="hidden">
-                <p id="lado-label" class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2">Alimentando: Pecho ...</p>
-                <p id="timer-display" class="text-7xl font-mono font-black text-slate-800 mb-8">00:00</p>
-                <div class="flex gap-3">
-                    <button id="pause-btn" onclick="pausarToma()" class="flex-1 bg-amber-400 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest">Pausar</button>
-                    <button id="resume-btn" onclick="reanudarToma()" class="flex-1 bg-green-500 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest hidden">Reanudar</button>
-                    <button onclick="finalizarToma()" class="flex-1 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest">Finalizar</button>
+            <div id="ui-corriendo" class="hidden">
+                <p id="lbl-lado" class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest"></p>
+                <p id="cronometro" class="text-6xl font-mono font-black mb-6">00:00</p>
+                <div class="flex gap-2">
+                    <button id="btn-p" onclick="pausa()" class="flex-1 bg-orange-400 text-white py-4 rounded-xl font-bold">PAUSA</button>
+                    <button id="btn-r" onclick="resume()" class="flex-1 bg-green-500 text-white py-4 rounded-xl font-bold hidden">SIGUE</button>
+                    <button onclick="terminar()" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-bold">FIN</button>
                 </div>
             </div>
         </div>
 
-        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4 px-2">Historial de tomas</h3>
-        <div id="history" class="space-y-3"></div>
+        <div id="historial" class="space-y-2"></div>
     </div>
 
     <script>
-        const config = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
-        firebase.initializeApp(config);
-        const db = firebase.database();
-
-        let familyID = localStorage.getItem('bf_family_id') || prompt("Código de Familia:").toUpperCase();
-        localStorage.setItem('bf_family_id', familyID);
-
-        let segundos = 0;
-        let cronoInt = null;
-        let pausado = false;
-        let gapSeleccionado = 3;
-        let datosToma = null;
-
-        window.onload = () => {
-            db.ref(`f/${familyID}`).on('value', snap => renderHistorial(snap.val() || {}));
-            setInterval(actualizarRelojProxima, 1000);
-            
-            // Solicitar permiso de notificaciones para alarmas
-            if ("Notification" in window) Notification.requestPermission();
+        // CONFIGURACIÓN (Verifica que tu DatabaseURL sea exactamente esta)
+        const firebaseConfig = {
+            projectId: "babyflow-11b57",
+            databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com"
         };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const ID_FAMILIA = "MAR123"; // ASEGÚRATE DE USAR TU CÓDIGO AQUÍ
 
-        function setGap(h) {
-            gapSeleccionado = h;
-            document.querySelectorAll('.btn-interval').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-        }
+        let tiempo = 0, motor = null, enPausa = false, horasGap = 3, tomaObj = null;
 
-        function iniciarToma(lado) {
-            // 1. Programar Próxima Toma DESDE EL INICIO (Regla de oro)
-            const horaProxima = Date.now() + (gapSeleccionado * 3600000);
-            db.ref(`f/${familyID}/info/proxima`).set(horaProxima);
+        function setH(n) { horasGap = n; }
 
-            // 2. Preparar UI y Cronómetro
-            segundos = 0;
-            pausado = false;
-            datosToma = {
-                lado: lado,
-                horaInicio: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
-            };
-
-            document.getElementById('idle-ui').classList.add('hidden');
-            document.getElementById('active-ui').classList.remove('hidden');
-            document.getElementById('lado-label').innerText = "Alimentando: Pecho " + lado;
+        function empezar(lado) {
+            // GRABA PRÓXIMA TOMA DESDE EL INICIO
+            db.ref(`f/${ID_FAMILIA}/proxima`).set(Date.now() + (horasGap * 3600000));
             
-            cronoInt = setInterval(() => {
-                if(!pausado) {
-                    segundos++;
-                    const min = Math.floor(segundos/60).toString().padStart(2,'0');
-                    const seg = (segundos%60).toString().padStart(2,'0');
-                    document.getElementById('timer-display').innerText = `${min}:${seg}`;
+            tiempo = 0; enPausa = false;
+            tomaObj = { lado, ini: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+            
+            document.getElementById('ui-espera').classList.add('hidden');
+            document.getElementById('ui-corriendo').classList.remove('hidden');
+            document.getElementById('lbl-lado').innerText = "Pecho " + lado;
+
+            motor = setInterval(() => {
+                if(!enPausa) {
+                    tiempo++;
+                    const m = Math.floor(tiempo/60).toString().padStart(2,'0');
+                    const s = (tiempo%60).toString().padStart(2,'0');
+                    document.getElementById('cronometro').innerText = `${m}:${s}`;
                 }
             }, 1000);
         }
 
-        function pausarToma() {
-            pausado = true;
-            document.getElementById('pause-btn').classList.add('hidden');
-            document.getElementById
+        function pausa() { enPausa = true; document.getElementById('btn-p').classList.add('hidden'); document.getElementById('btn-r').classList.remove('hidden'); }
+        function resume() { enPausa = false; document.getElementById('btn-r').classList.add('hidden'); document.getElementById('btn-p').classList.remove('hidden'); }
+
+        function terminar() {
+            clearInterval(motor);
+            const fin = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            db.ref(`f/${ID_FAMILIA}/registros`).push({
+                ts: Date.now(),
+                dur: Math.max(1, Math.round(tiempo/60)),
+                lado: tomaObj.lado,
+                intervalo: `${tomaObj.ini} a ${fin}`
+            });
+            document.getElementById('ui-espera').classList.remove('hidden');
+            document.getElementById('ui-corriendo').classList.add('hidden');
+        }
+
+        // RELOJ CUENTA REGRESIVA
+        setInterval(() => {
+            db.ref(`f/${ID_FAMILIA}/proxima`).on('value', s => {
+                const t = s.val();
+                if(!t) return;
+                const d = t - Date.now();
+                if(d <= 0) document.getElementById('clock').innerText = "¡TOCA!";
+                else {
+                    const h = Math.floor(d/3600000), m = Math.floor((d%3600000)/60000), sec = Math.floor((d%60000)/1000);
+                    document.getElementById('clock').innerText = `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+                }
+            });
+        }, 1000);
+
+        // LEER HISTORIAL (Realtime)
+        db.ref(`f/${ID_FAMILIA}/registros`).on('value', snap => {
+            const h = document.getElementById('historial'); h.innerHTML = '';
+            const data = snap.val() ? Object.values(snap.val()) : [];
+            data.reverse().slice(0,5).forEach(r => {
+                h.innerHTML += `<div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
+                    <div><p class="font-bold">${r.dur} min - ${r.lado}</p><p class="text-[10px] text-slate-400">${r.intervalo}</p></div>
+                    <button onclick="borrar('${Object.keys(snap.val())[data.indexOf(r)]}')" class="text-red-300">✕</button>
+                </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
