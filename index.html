@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3209/3209121.png">
-    <title>BabyFlow Pro - Med Panel</title>
+
+    <title>BabyFlow Pro</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -15,209 +18,223 @@
 
     <style>
         :root { --main-color: #db2777; }
-        body { font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: -apple-system, system-ui, sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            padding-top: env(safe-area-inset-top);
+        }
         .glass { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .modo-medico .solo-padres { display: none !important; }
-        #splash { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; items: center; justify-content: center; transition: 0.5s; }
-        .patient-card { transition: all 0.2s; border-left: 4px solid transparent; }
-        .patient-card:active { transform: scale(0.97); background: #f8fafc; }
+        .btn-time { border: 1px solid #e2e8f0; padding: 10px; border-radius: 14px; font-size: 13px; font-weight: 800; transition: 0.2s; }
+        .btn-time.active { background: #000; color: #fff; border-color: #000; }
+        #splash { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; items: center; justify-content: center; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="bg-slate-50 min-h-screen pb-20">
 
-    <div id="splash" class="flex-col">
-        <img src="https://cdn-icons-png.flaticon.com/512/3209/3209121.png" width="60" class="mb-4 animate-bounce">
-        <h1 class="text-2xl font-black text-slate-800 tracking-tighter">BabyFlow <span class="text-pink-500">Pro</span></h1>
+    <div id="splash">
+        <h1 class="text-3xl font-black text-slate-800 tracking-tighter">BabyFlow <span class="text-pink-500">PRO</span></h1>
     </div>
 
     <div id="screen-role" class="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-8 hidden">
-        <h1 class="text-3xl font-black mb-12 text-center text-slate-800">¿Cómo usarás la App?</h1>
+        <h1 class="text-3xl font-black mb-10 text-center">Configuración inicial</h1>
         <div class="w-full max-w-xs space-y-4">
-            <button onclick="selectRole('parent')" class="w-full bg-pink-600 text-white py-6 rounded-[2rem] font-black text-lg shadow-xl shadow-pink-100">Soy Mamá / Papá</button>
-            <button onclick="selectRole('medico')" class="w-full border-2 border-slate-200 text-slate-600 py-6 rounded-[2rem] font-black text-lg hover:bg-slate-50">Soy Pediatra</button>
+            <button onclick="selectRole('parent')" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black shadow-xl">Familia (Registro)</button>
+            <button onclick="selectRole('medico')" class="w-full border-2 border-slate-900 py-6 rounded-[2rem] font-black">Pediatra (Consultas)</button>
         </div>
-    </div>
-
-    <div id="screen-medico" class="max-w-md mx-auto p-6 hidden">
-        <header class="flex justify-between items-center mb-10 pt-4">
-            <div>
-                <h1 class="text-2xl font-black text-slate-800">Panel Médico</h1>
-                <p id="med-name" class="text-slate-400 text-sm font-bold uppercase tracking-widest">Dr. Registrado</p>
-            </div>
-            <button onclick="addPaciente()" class="bg-slate-900 text-white w-12 h-12 rounded-full font-black text-2xl shadow-lg">+</button>
-        </header>
-        
-        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">Mis Pacientes Activos</h3>
-        <div id="lista-pacientes" class="space-y-4">
-            </div>
-        
-        <button onclick="logout()" class="mt-20 w-full text-slate-300 text-[10px] font-black uppercase tracking-widest">Cerrar Sesión / Cambiar de Rol</button>
     </div>
 
     <div id="app" class="max-w-md mx-auto p-4 hidden">
-        <nav class="flex justify-between items-center py-4">
-            <button id="back-to-list" onclick="showPanelMedico()" class="hidden bg-white border p-3 rounded-full shadow-sm text-sm font-bold">←</button>
+        <nav class="flex justify-between items-center py-4 mb-4">
+            <button id="btn-back" onclick="location.reload()" class="hidden bg-white border p-3 rounded-full text-xs font-bold">← LISTA</button>
             <div class="text-right flex-1">
-                <h2 id="baby-name" class="text-3xl font-black text-slate-800 tracking-tighter">...</h2>
-                <span id="display-id" class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter"></span>
+                <h2 id="baby-name" class="text-3xl font-black text-slate-800 tracking-tighter">Martina</h2>
+                <span id="display-id" class="text-[10px] font-bold text-slate-400 border px-2 py-0.5 rounded uppercase tracking-widest"></span>
             </div>
         </nav>
 
-        <div class="glass rounded-[2.5rem] p-4 mb-6"><canvas id="chart" style="height:160px"></canvas></div>
-
-        <div class="solo-padres space-y-4">
-            <div class="glass rounded-[2.5rem] p-6 text-center">
-                <div id="timer-idle" class="flex gap-4">
-                    <button onclick="startTimer('Izquierdo')" class="flex-1 py-10 rounded-[2rem] bg-pink-50 text-pink-600 border-2 border-pink-100 font-black">IZQUIERDO</button>
-                    <button onclick="startTimer('Derecho')" class="flex-1 py-10 rounded-[2rem] bg-blue-50 text-blue-600 border-2 border-blue-100 font-black">DERECHO</button>
-                </div>
-                <div id="timer-active" class="hidden">
-                    <p id="active-time" class="text-6xl font-mono font-black my-4 text-slate-700">00:00</p>
-                    <button onclick="stopTimer()" class="w-full bg-slate-900 text-white py-6 rounded-3xl font-black uppercase tracking-widest">Finalizar Toma</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="openPañal()" class="glass p-6 rounded-[2rem] font-black">🧷 PAÑAL</button>
-                <button onclick="openPeso()" class="glass p-6 rounded-[2rem] font-black">⚖️ PESO</button>
+        <div class="glass rounded-[2.5rem] p-6 mb-6 bg-white flex flex-col items-center shadow-sm">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Próxima Toma (Desde inicio)</p>
+            <p id="next-timer" class="text-4xl font-black text-slate-800 mb-4 tracking-tighter">--:--:--</p>
+            <div class="flex gap-2 solo-padres">
+                <button onclick="updateNextTime(1)" class="btn-time">1h</button>
+                <button onclick="updateNextTime(2)" class="btn-time">2h</button>
+                <button onclick="updateNextTime(3)" id="default-next" class="btn-time active">3h</button>
+                <button onclick="updateNextTime(4)" class="btn-time">4h</button>
             </div>
         </div>
 
-        <div id="med-alert" class="hidden bg-amber-50 border-2 border-amber-100 p-4 rounded-2xl mb-6">
-            <p class="text-[10px] font-black text-amber-600 uppercase">Modo Consulta</p>
-            <p class="text-xs text-amber-700">Estás visualizando los datos en tiempo real. La edición está deshabilitada para médicos.</p>
+        <div class="solo-padres glass rounded-[3rem] p-8 mb-6 text-center shadow-lg border-2 border-white">
+            <div id="timer-idle" class="flex gap-4">
+                <button onclick="startTimer('Izquierdo')" class="flex-1 py-12 rounded-[2.5rem] bg-pink-50 text-pink-600 border-2 border-pink-100 font-black text-lg active:scale-95 transition">IZQ</button>
+                <button onclick="startTimer('Derecho')" class="flex-1 py-12 rounded-[2.5rem] bg-blue-50 text-blue-600 border-2 border-blue-100 font-black text-lg active:scale-95 transition">DER</button>
+            </div>
+            <div id="timer-active" class="hidden">
+                <p id="active-side" class="text-xs font-bold text-slate-300 uppercase mb-2 tracking-widest">...</p>
+                <p id="active-time" class="text-7xl font-mono font-black my-6 text-slate-800 tracking-tighter">00:00</p>
+                <div class="flex gap-3">
+                    <button id="btn-pause" onclick="pauseToma()" class="flex-1 bg-amber-400 text-white py-5 rounded-2xl font-black uppercase text-xs">Pausar</button>
+                    <button id="btn-resume" onclick="resumeToma()" class="flex-1 bg-green-500 text-white py-5 rounded-2xl font-black uppercase text-xs hidden">Reanudar</button>
+                    <button onclick="stopToma()" class="flex-1 bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs">Finalizar</button>
+                </div>
+            </div>
         </div>
 
-        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 px-2">Historial Clínico</h3>
+        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4 px-2">Historial Martina</h3>
         <div id="history" class="space-y-3 pb-24"></div>
     </div>
 
     <script>
-        const fbCfg = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
-        firebase.initializeApp(fbCfg);
+        const fb = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
+        firebase.initializeApp(fb);
         const db = firebase.database();
 
         let role = localStorage.getItem('bf_role');
-        let currentID = localStorage.getItem('bf_current_id');
-        let myPatients = JSON.parse(localStorage.getItem('bf_med_list') || "[]");
-        let chart = null;
+        let fID = localStorage.getItem('bf_family_id');
+        let activeToma = null;
+        let tInt = null;
+        let isPaused = false;
+        let nextGap = 3; // Horas por defecto
 
         window.onload = () => {
-            setTimeout(() => { document.getElementById('splash').style.opacity = '0'; 
-            setTimeout(() => document.getElementById('splash').style.display='none', 500); }, 1000);
-
+            setTimeout(() => document.getElementById('splash').style.display='none', 800);
             if(!role) document.getElementById('screen-role').classList.remove('hidden');
-            else if(role === 'medico' && !currentID) showPanelMedico();
-            else initApp(currentID);
+            else initApp(fID);
+            
+            setInterval(countdown, 1000);
         };
 
         function selectRole(r) {
             role = r;
             localStorage.setItem('bf_role', r);
             document.getElementById('screen-role').classList.add('hidden');
-            if(r === 'medico') {
-                const nombre = prompt("Nombre del Profesional (Dr/Dra):");
-                localStorage.setItem('bf_med_name', nombre || "Pediatra");
-                showPanelMedico();
-            } else {
-                const id = prompt("Ingrese el Código de su Familia (ej: BF-XXXX):").toUpperCase();
-                if(id) initApp(id);
-            }
-        }
-
-        function showPanelMedico() {
-            currentID = null; // Limpiar para que no cargue un bebé específico
-            document.getElementById('app').classList.add('hidden');
-            document.getElementById('screen-medico').classList.remove('hidden');
-            document.getElementById('med-name').innerText = "Dr/a. " + localStorage.getItem('bf_med_name');
-            renderPatientsList();
-        }
-
-        function addPaciente() {
-            const id = prompt("Ingrese el Código de Familia del paciente:").toUpperCase();
-            if(id && !myPatients.includes(id)) {
-                myPatients.push(id);
-                localStorage.setItem('bf_med_list', JSON.stringify(myPatients));
-                renderPatientsList();
-            }
-        }
-
-        function renderPatientsList() {
-            const list = document.getElementById('lista-pacientes');
-            list.innerHTML = myPatients.length === 0 ? '<p class="text-center py-10 text-slate-300 text-sm">No tienes pacientes vinculados todavía.</p>' : '';
-            
-            myPatients.forEach(id => {
-                db.ref(`f/${id}/info`).once('value', snap => {
-                    const info = snap.val() || { name: 'Paciente' };
-                    const color = info.gender === 'varon' ? 'border-blue-400' : 'border-pink-400';
-                    list.innerHTML += `
-                        <div onclick="initApp('${id}')" class="glass patient-card p-6 rounded-[2rem] flex justify-between items-center ${color}">
-                            <div>
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${id}</p>
-                                <p class="text-xl font-black text-slate-800">${info.name}</p>
-                            </div>
-                            <span class="bg-slate-50 p-2 rounded-full text-slate-300">❯</span>
-                        </div>`;
-                });
-            });
+            if(r === 'medico') alert("Como médico, vincula pacientes con su código.");
+            const id = prompt("Ingrese Código de Familia:").toUpperCase();
+            if(id) initApp(id);
         }
 
         function initApp(id) {
-            currentID = id;
-            localStorage.setItem('bf_current_id', id);
-            document.getElementById('screen-medico').classList.add('hidden');
+            fID = id;
+            localStorage.setItem('bf_family_id', id);
             document.getElementById('app').classList.remove('hidden');
-
+            document.getElementById('display-id').innerText = id;
             if(role === 'medico') {
                 document.body.classList.add('modo-medico');
-                document.getElementById('back-to-list').classList.remove('hidden');
-                document.getElementById('med-alert').classList.remove('hidden');
+                document.getElementById('btn-back').classList.remove('hidden');
             }
+            db.ref(`f/${id}`).on('value', snap => render(snap.val() || {}));
+        }
 
-            db.ref(`f/${id}`).on('value', snap => {
-                const data = snap.val() || {};
-                updateView(data);
+        // LÓGICA CRONÓMETRO Y REANUDAR
+        function startTimer(lado) {
+            // CALCULA PRÓXIMA TOMA DESDE EL INICIO
+            const target = Date.now() + (nextGap * 3600000);
+            db.ref(`f/${fID}/info/next`).set(target);
+
+            activeToma = {
+                lado,
+                seg: 0,
+                ini: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+                ts: Date.now()
+            };
+            
+            document.getElementById('timer-idle').classList.add('hidden');
+            document.getElementById('timer-active').classList.remove('hidden');
+            document.getElementById('active-side').innerText = "PECHO " + lado;
+            
+            run();
+        }
+
+        function run() {
+            tInt = setInterval(() => {
+                if(!isPaused) {
+                    activeToma.seg++;
+                    const m = Math.floor(activeToma.seg/60).toString().padStart(2,'0');
+                    const s = (activeToma.seg%60).toString().padStart(2,'0');
+                    document.getElementById('active-time').innerText = `${m}:${s}`;
+                }
+            }, 1000);
+        }
+
+        function pauseToma() {
+            isPaused = true;
+            document.getElementById('btn-pause').classList.add('hidden');
+            document.getElementById('btn-resume').classList.remove('hidden');
+        }
+
+        function resumeToma() {
+            isPaused = false;
+            document.getElementById('btn-resume').classList.add('hidden');
+            document.getElementById('btn-pause').classList.remove('hidden');
+        }
+
+        function stopToma() {
+            clearInterval(tInt);
+            const fin = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const id = 'T' + Date.now();
+            
+            db.ref(`f/${fID}/tomas/${id}`).set({
+                id,
+                ts: Date.now(),
+                dur: Math.max(1, Math.round(activeToma.seg / 60)),
+                lado: activeToma.lado,
+                ini: activeToma.ini,
+                fin: fin,
+                type: 'toma'
+            });
+
+            document.getElementById('timer-idle').classList.remove('hidden');
+            document.getElementById('timer-active').classList.add('hidden');
+            document.getElementById('active-time').innerText = "00:00";
+            isPaused = false;
+        }
+
+        // LÓGICA PRÓXIMA TOMA
+        function updateNextTime(h) {
+            nextGap = h;
+            document.querySelectorAll('.btn-time').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function countdown() {
+            db.ref(`f/${fID}/info/next`).once('value', snap => {
+                const target = snap.val();
+                if(!target) return;
+                const diff = target - Date.now();
+                const el = document.getElementById('next-timer');
+                
+                if(diff <= 0) {
+                    el.innerText = "¡TOCA COMER!";
+                    el.classList.add('text-pink-600', 'animate-pulse');
+                } else {
+                    el.classList.remove('text-pink-600', 'animate-pulse');
+                    const h = Math.floor(diff/3600000);
+                    const m = Math.floor((diff%3600000)/60000);
+                    const s = Math.floor((diff%60000)/1000);
+                    el.innerText = `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                }
             });
         }
 
-        function updateView(data) {
-            const info = data.info || {};
-            document.getElementById('baby-name').innerText = info.name;
-            document.getElementById('display-id').innerText = currentID;
-
+        function render(data) {
+            document.getElementById('baby-name').innerText = data.info?.name || "Martina";
             const hist = document.getElementById('history');
             hist.innerHTML = '';
+            
             const tomas = data.tomas ? Object.values(data.tomas) : [];
-            const pañales = data.pañales ? Object.values(data.pañales) : [];
-            const pesos = data.pesos ? Object.values(data.pesos) : [];
-
-            [...tomas, ...pañales, ...pesos].sort((a,b) => b.ts - a.ts).slice(0,15).forEach(item => {
-                let ic = item.dur ? '🍼' : (item.val ? '⚖️' : '🧷');
-                let txt = item.dur ? `${item.dur} min` : (item.val ? `${item.val} kg` : "Cambio Pañal");
-                hist.innerHTML += `<div class="glass p-5 rounded-[2.2rem] flex justify-between items-center">
-                    <div class="flex items-center gap-4">
-                        <span class="text-2xl">${ic}</span>
-                        <div><p class="font-black text-slate-800">${txt}</p><p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">${item.lado ? 'Lado '+item.lado : 'Registro'}</p></div>
-                    </div>
-                </div>`;
-            });
-            drawChart(tomas.slice(-7));
-        }
-
-        function drawChart(tomas) {
-            const ctx = document.getElementById('chart').getContext('2d');
-            if(chart) chart.destroy();
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: tomas.map(t => t.ini),
-                    datasets: [{ data: tomas.map(t => t.dur), borderColor: '#94a3b8', borderWidth: 3, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#db2777' }]
-                },
-                options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+            tomas.sort((a,b) => b.ts - a.ts).slice(0,10).forEach(t => {
+                hist.innerHTML += `
+                    <div class="glass p-5 rounded-[2rem] flex justify-between items-center bg-white">
+                        <div class="flex items-center gap-4">
+                            <span class="text-2xl">🍼</span>
+                            <div>
+                                <p class="font-black text-slate-800">${t.dur} min</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase">${t.ini} a ${t.fin} • Lado ${t.lado}</p>
+                            </div>
+                        </div>
+                    </div>`;
             });
         }
-
-        function logout() { localStorage.clear(); location.reload(); }
-        // ... (Aquí irían el resto de funciones operativas: startTimer, etc.)
     </script>
 </body>
 </html>
