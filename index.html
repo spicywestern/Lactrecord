@@ -2,151 +2,222 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>BabyFlow</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3209/3209121.png">
+    <title>BabyFlow Pro - Med Panel</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
-        .card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .flex { display: flex; gap: 10px; }
-        .btn { flex: 1; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-izq { background: #ffe4e6; color: #be185d; }
-        .btn-der { background: #dcfce7; color: #15803d; }
-        .btn-stop { background: #ef4444; color: white; width: 100%; }
-        .btn-ok { background: #2563eb; color: white; padding: 10px 20px; }
-        .stat { text-align: center; flex: 1; }
-        .stat-val { font-size: 20px; font-weight: bold; display: block; }
-        .stat-lab { font-size: 10px; color: #888; text-transform: uppercase; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        .hist-item { background: white; padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #ddd; }
-        .hidden { display: none; }
-        .alarma-sel { display: flex; justify-content: space-between; margin-top: 10px; background: #eee; padding: 4px; border-radius: 10px; }
-        .btn-h { border: none; background: none; padding: 8px; flex: 1; border-radius: 8px; cursor: pointer; }
-        .btn-h.active { background: #2563eb; color: white; }
+        :root { --main-color: #db2777; }
+        body { font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .modo-medico .solo-padres { display: none !important; }
+        #splash { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; items: center; justify-content: center; transition: 0.5s; }
+        .patient-card { transition: all 0.2s; border-left: 4px solid transparent; }
+        .patient-card:active { transform: scale(0.97); background: #f8fafc; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 min-h-screen">
 
-    <h2 style="text-align: center; margin-bottom: 20px;">BabyFlow Pro</h2>
+    <div id="splash" class="flex-col">
+        <img src="https://cdn-icons-png.flaticon.com/512/3209/3209121.png" width="60" class="mb-4 animate-bounce">
+        <h1 class="text-2xl font-black text-slate-800 tracking-tighter">BabyFlow <span class="text-pink-500">Pro</span></h1>
+    </div>
 
-    <div class="card flex">
-        <div class="stat">
-            <span class="stat-lab">Evolución Peso</span>
-            <span id="evPeso" class="stat-val">0.000</span>
-        </div>
-        <div class="stat">
-            <span class="stat-lab">Próxima Toma</span>
-            <span id="proxToma" class="stat-val">--:--</span>
+    <div id="screen-role" class="fixed inset-0 z-[500] bg-white flex flex-col items-center justify-center p-8 hidden">
+        <h1 class="text-3xl font-black mb-12 text-center text-slate-800">¿Cómo usarás la App?</h1>
+        <div class="w-full max-w-xs space-y-4">
+            <button onclick="selectRole('parent')" class="w-full bg-pink-600 text-white py-6 rounded-[2rem] font-black text-lg shadow-xl shadow-pink-100">Soy Mamá / Papá</button>
+            <button onclick="selectRole('medico')" class="w-full border-2 border-slate-200 text-slate-600 py-6 rounded-[2rem] font-black text-lg hover:bg-slate-50">Soy Pediatra</button>
         </div>
     </div>
 
-    <div id="box-reposo" class="card">
-        <p style="text-align:center; margin:0 0 10px 0; color:#888;">Sugerencia: <b id="sugLado" style="color:#be185d">IZQ</b></p>
-        <div class="flex">
-            <button class="btn btn-izq" onclick="empezar('Izquierdo')">IZQUIERDO</button>
-            <button class="btn btn-der" onclick="empezar('Derecho')">DERECHO</button>
-        </div>
+    <div id="screen-medico" class="max-w-md mx-auto p-6 hidden">
+        <header class="flex justify-between items-center mb-10 pt-4">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800">Panel Médico</h1>
+                <p id="med-name" class="text-slate-400 text-sm font-bold uppercase tracking-widest">Dr. Registrado</p>
+            </div>
+            <button onclick="addPaciente()" class="bg-slate-900 text-white w-12 h-12 rounded-full font-black text-2xl shadow-lg">+</button>
+        </header>
+        
+        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">Mis Pacientes Activos</h3>
+        <div id="lista-pacientes" class="space-y-4">
+            </div>
+        
+        <button onclick="logout()" class="mt-20 w-full text-slate-300 text-[10px] font-black uppercase tracking-widest">Cerrar Sesión / Cambiar de Rol</button>
     </div>
 
-    <div id="box-activo" class="card hidden" style="text-align:center;">
-        <p id="txt-activo" style="font-weight:bold; font-size:18px;"></p>
-        <button class="btn btn-stop" onclick="terminar()">FINALIZAR TOMA</button>
-    </div>
+    <div id="app" class="max-w-md mx-auto p-4 hidden">
+        <nav class="flex justify-between items-center py-4">
+            <button id="back-to-list" onclick="showPanelMedico()" class="hidden bg-white border p-3 rounded-full shadow-sm text-sm font-bold">←</button>
+            <div class="text-right flex-1">
+                <h2 id="baby-name" class="text-3xl font-black text-slate-800 tracking-tighter">...</h2>
+                <span id="display-id" class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter"></span>
+            </div>
+        </nav>
 
-    <div class="card">
-        <span class="stat-lab">Intervalo Alarma</span>
-        <div class="alarma-sel">
-            <button class="btn-h" id="h1" onclick="setH(1)">1h</button>
-            <button class="btn-h" id="h2" onclick="setH(2)">2h</button>
-            <button class="btn-h" id="h3" onclick="setH(3)">3h</button>
-            <button class="btn-h" id="h4" onclick="setH(4)">4h</button>
-        </div>
-        <br>
-        <span class="stat-lab">Registrar Peso (kg)</span>
-        <div class="flex" style="margin-top:5px;">
-            <input type="text" id="inPeso" inputmode="decimal" placeholder="3.500">
-            <button class="btn btn-ok" onclick="addPeso()">OK</button>
-        </div>
-    </div>
+        <div class="glass rounded-[2.5rem] p-4 mb-6"><canvas id="chart" style="height:160px"></canvas></div>
 
-    <div id="hist"></div>
+        <div class="solo-padres space-y-4">
+            <div class="glass rounded-[2.5rem] p-6 text-center">
+                <div id="timer-idle" class="flex gap-4">
+                    <button onclick="startTimer('Izquierdo')" class="flex-1 py-10 rounded-[2rem] bg-pink-50 text-pink-600 border-2 border-pink-100 font-black">IZQUIERDO</button>
+                    <button onclick="startTimer('Derecho')" class="flex-1 py-10 rounded-[2rem] bg-blue-50 text-blue-600 border-2 border-blue-100 font-black">DERECHO</button>
+                </div>
+                <div id="timer-active" class="hidden">
+                    <p id="active-time" class="text-6xl font-mono font-black my-4 text-slate-700">00:00</p>
+                    <button onclick="stopTimer()" class="w-full bg-slate-900 text-white py-6 rounded-3xl font-black uppercase tracking-widest">Finalizar Toma</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="openPañal()" class="glass p-6 rounded-[2rem] font-black">🧷 PAÑAL</button>
+                <button onclick="openPeso()" class="glass p-6 rounded-[2rem] font-black">⚖️ PESO</button>
+            </div>
+        </div>
+
+        <div id="med-alert" class="hidden bg-amber-50 border-2 border-amber-100 p-4 rounded-2xl mb-6">
+            <p class="text-[10px] font-black text-amber-600 uppercase">Modo Consulta</p>
+            <p class="text-xs text-amber-700">Estás visualizando los datos en tiempo real. La edición está deshabilitada para médicos.</p>
+        </div>
+
+        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 px-2">Historial Clínico</h3>
+        <div id="history" class="space-y-3 pb-24"></div>
+    </div>
 
     <script>
-        let tomas = JSON.parse(localStorage.getItem('t')) || [];
-        let pesos = JSON.parse(localStorage.getItem('p')) || [];
-        let hAlarma = parseInt(localStorage.getItem('ha')) || 3;
-        let tActiva = null;
+        const fbCfg = { projectId: "babyflow-11b57", databaseURL: "https://babyflow-11b57-default-rtdb.firebaseio.com" };
+        firebase.initializeApp(fbCfg);
+        const db = firebase.database();
 
-        function render() {
-            localStorage.setItem('t', JSON.stringify(tomas));
-            localStorage.setItem('p', JSON.stringify(pesos));
-            localStorage.setItem('ha', hAlarma);
+        let role = localStorage.getItem('bf_role');
+        let currentID = localStorage.getItem('bf_current_id');
+        let myPatients = JSON.parse(localStorage.getItem('bf_med_list') || "[]");
+        let chart = null;
 
-            // UI Alarma
-            [1,2,3,4].forEach(i => document.getElementById('h'+i).className = (i==hAlarma ? 'btn-h active' : 'btn-h'));
+        window.onload = () => {
+            setTimeout(() => { document.getElementById('splash').style.opacity = '0'; 
+            setTimeout(() => document.getElementById('splash').style.display='none', 500); }, 1000);
 
-            // Sugerencia y Próxima
-            if(tomas.length > 0) {
-                document.getElementById('sugLado').innerText = tomas[0].lado == 'Izquierdo' ? 'DER' : 'IZQ';
-                let fFin = new Date(tomas[0].idFin);
-                fFin.setHours(fFin.getHours() + hAlarma);
-                document.getElementById('proxToma').innerText = fFin.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            if(!role) document.getElementById('screen-role').classList.remove('hidden');
+            else if(role === 'medico' && !currentID) showPanelMedico();
+            else initApp(currentID);
+        };
+
+        function selectRole(r) {
+            role = r;
+            localStorage.setItem('bf_role', r);
+            document.getElementById('screen-role').classList.add('hidden');
+            if(r === 'medico') {
+                const nombre = prompt("Nombre del Profesional (Dr/Dra):");
+                localStorage.setItem('bf_med_name', nombre || "Pediatra");
+                showPanelMedico();
+            } else {
+                const id = prompt("Ingrese el Código de su Familia (ej: BF-XXXX):").toUpperCase();
+                if(id) initApp(id);
+            }
+        }
+
+        function showPanelMedico() {
+            currentID = null; // Limpiar para que no cargue un bebé específico
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('screen-medico').classList.remove('hidden');
+            document.getElementById('med-name').innerText = "Dr/a. " + localStorage.getItem('bf_med_name');
+            renderPatientsList();
+        }
+
+        function addPaciente() {
+            const id = prompt("Ingrese el Código de Familia del paciente:").toUpperCase();
+            if(id && !myPatients.includes(id)) {
+                myPatients.push(id);
+                localStorage.setItem('bf_med_list', JSON.stringify(myPatients));
+                renderPatientsList();
+            }
+        }
+
+        function renderPatientsList() {
+            const list = document.getElementById('lista-pacientes');
+            list.innerHTML = myPatients.length === 0 ? '<p class="text-center py-10 text-slate-300 text-sm">No tienes pacientes vinculados todavía.</p>' : '';
+            
+            myPatients.forEach(id => {
+                db.ref(`f/${id}/info`).once('value', snap => {
+                    const info = snap.val() || { name: 'Paciente' };
+                    const color = info.gender === 'varon' ? 'border-blue-400' : 'border-pink-400';
+                    list.innerHTML += `
+                        <div onclick="initApp('${id}')" class="glass patient-card p-6 rounded-[2rem] flex justify-between items-center ${color}">
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${id}</p>
+                                <p class="text-xl font-black text-slate-800">${info.name}</p>
+                            </div>
+                            <span class="bg-slate-50 p-2 rounded-full text-slate-300">❯</span>
+                        </div>`;
+                });
+            });
+        }
+
+        function initApp(id) {
+            currentID = id;
+            localStorage.setItem('bf_current_id', id);
+            document.getElementById('screen-medico').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+
+            if(role === 'medico') {
+                document.body.classList.add('modo-medico');
+                document.getElementById('back-to-list').classList.remove('hidden');
+                document.getElementById('med-alert').classList.remove('hidden');
             }
 
-            // Evolución Peso
-            if(pesos.length > 1) {
-                let diff = (pesos[0].v - pesos[pesos.length-1].v).toFixed(3);
-                document.getElementById('evPeso').innerText = (diff >= 0 ? '+' : '') + diff + ' kg';
-            }
+            db.ref(`f/${id}`).on('value', snap => {
+                const data = snap.val() || {};
+                updateView(data);
+            });
+        }
 
-            // Historial
-            let hDiv = document.getElementById('hist');
-            hDiv.innerHTML = '<p class="stat-lab">Últimos registros</p>';
-            tomas.slice(0,5).forEach(t => {
-                hDiv.innerHTML += `<div class="hist-item" style="border-color:${t.lado=='Izquierdo'?'#be185d':'#15803d'}">
-                    <span><b>${t.lado}</b><br><small>${t.i} - ${t.dur} min</small></span>
-                    <button onclick="borrar(${t.id})" style="background:none; border:none; color:#ccc; font-size:20px;">&times;</button>
+        function updateView(data) {
+            const info = data.info || {};
+            document.getElementById('baby-name').innerText = info.name;
+            document.getElementById('display-id').innerText = currentID;
+
+            const hist = document.getElementById('history');
+            hist.innerHTML = '';
+            const tomas = data.tomas ? Object.values(data.tomas) : [];
+            const pañales = data.pañales ? Object.values(data.pañales) : [];
+            const pesos = data.pesos ? Object.values(data.pesos) : [];
+
+            [...tomas, ...pañales, ...pesos].sort((a,b) => b.ts - a.ts).slice(0,15).forEach(item => {
+                let ic = item.dur ? '🍼' : (item.val ? '⚖️' : '🧷');
+                let txt = item.dur ? `${item.dur} min` : (item.val ? `${item.val} kg` : "Cambio Pañal");
+                hist.innerHTML += `<div class="glass p-5 rounded-[2.2rem] flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl">${ic}</span>
+                        <div><p class="font-black text-slate-800">${txt}</p><p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">${item.lado ? 'Lado '+item.lado : 'Registro'}</p></div>
+                    </div>
                 </div>`;
             });
+            drawChart(tomas.slice(-7));
         }
 
-        function empezar(l) {
-            tActiva = { ini: new Date(), lado: l };
-            document.getElementById('box-reposo').classList.add('hidden');
-            document.getElementById('box-activo').classList.remove('hidden');
-            document.getElementById('txt-activo').innerText = "Alimentando: " + l;
-            render();
-        }
-
-        function terminar() {
-            let fin = new Date();
-            let dur = Math.round((fin - tActiva.ini) / 60000);
-            tomas.unshift({
-                id: Date.now(),
-                idFin: fin.getTime(),
-                lado: tActiva.lado,
-                i: tActiva.ini.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-                dur: dur
+        function drawChart(tomas) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: tomas.map(t => t.ini),
+                    datasets: [{ data: tomas.map(t => t.dur), borderColor: '#94a3b8', borderWidth: 3, tension: 0.4, pointRadius: 2, pointBackgroundColor: '#db2777' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
             });
-            document.getElementById('box-reposo').classList.remove('hidden');
-            document.getElementById('box-activo').classList.add('hidden');
-            render();
         }
 
-        function setH(n) { hAlarma = n; render(); }
-
-        function addPeso() {
-            let v = parseFloat(document.getElementById('inPeso').value.replace(',', '.'));
-            if(!isNaN(v)) {
-                pesos.unshift({id: Date.now(), v: v});
-                document.getElementById('inPeso').value = '';
-                render();
-            }
-        }
-
-        function borrar(id) { if(confirm("¿Borrar?")) { tomas = tomas.filter(x => x.id !== id); render(); } }
-
-        render();
+        function logout() { localStorage.clear(); location.reload(); }
+        // ... (Aquí irían el resto de funciones operativas: startTimer, etc.)
     </script>
 </body>
 </html>
